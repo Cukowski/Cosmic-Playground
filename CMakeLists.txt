@@ -1,33 +1,36 @@
 cmake_minimum_required(VERSION 3.10)
 project(GravitySimulationGame)
 
-set(CMAKE_CXX_STANDARD 17) 
+set(CMAKE_CXX_STANDARD 17)
 
-# Define paths for source and external libraries
+# Define source and include paths
 set(SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
-set(SFML_DIR "${CMAKE_SOURCE_DIR}/external/SFML/lib/cmake/SFML")
+set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
+set(SFML_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/SFML/include")
+set(SFML_LIB_DIR "${CMAKE_SOURCE_DIR}/external/SFML/lib")
 set(IMGUI_SFML_DIR "${CMAKE_SOURCE_DIR}/external/ImGui-SFML")
 
-# Find OpenGL (Needed for ImGui-SFML)
-find_package(OpenGL REQUIRED)
+# Add include directories
+include_directories(
+    ${INCLUDE_DIR}
+    ${SFML_INCLUDE_DIR}
+    ${IMGUI_SFML_DIR}
+    ${IMGUI_SFML_DIR}/imgui
+)
 
-# Ensure CMake finds SFML and ImGui-SFML headers
-include_directories(${SFML_DIR}/../../include)
-include_directories(${IMGUI_SFML_DIR})
-include_directories(${IMGUI_SFML_DIR}/imgui)  # Include "imgui.h"
-include_directories(${CMAKE_SOURCE_DIR}/include)  # Add include directory
+# Link directories for local libraries
+link_directories(${SFML_LIB_DIR})
 
-# Add ImGui Core Source Files
+# ImGui source files
 set(IMGUI_SRC
     ${IMGUI_SFML_DIR}/imgui/imgui.cpp
     ${IMGUI_SFML_DIR}/imgui/imgui_draw.cpp
     ${IMGUI_SFML_DIR}/imgui/imgui_widgets.cpp
     ${IMGUI_SFML_DIR}/imgui/imgui_tables.cpp
-    ${IMGUI_SFML_DIR}/imgui-SFML.cpp  # SFML integration
+    ${IMGUI_SFML_DIR}/imgui-SFML.cpp
 )
 
-find_package(SFML 2.6 REQUIRED COMPONENTS graphics window system)
-
+# Game source files
 set(SOURCES
     ${SOURCE_DIR}/main.cpp
     ${SOURCE_DIR}/GravitySource.cpp
@@ -39,25 +42,36 @@ set(SOURCES
 # Create executable
 add_executable(GravitySimulationGame ${SOURCES})
 
-# Link SFML, ImGui-SFML, and OpenGL (Windows-specific linking)
-target_link_libraries(GravitySimulationGame sfml-graphics sfml-window sfml-system OpenGL::GL)
-
-# Windows OpenGL fix
+# Platform-specific linking
 if (WIN32)
-    target_link_libraries(GravitySimulationGame opengl32)
+    target_link_libraries(GravitySimulationGame
+        sfml-graphics-d
+        sfml-window-d
+        sfml-system-d
+        opengl32
+    )
+elseif (APPLE)
+    target_link_libraries(GravitySimulationGame
+        sfml-graphics
+        sfml-window
+        sfml-system
+        "-framework OpenGL"
+    )
+elseif (UNIX)
+    target_link_libraries(GravitySimulationGame
+        sfml-graphics
+        sfml-window
+        sfml-system
+        GL
+        X11
+        pthread
+    )
 endif()
 
-# Linux-specific linking (for OpenGL & X11)
-if (UNIX AND NOT APPLE)
-    target_link_libraries(GravitySimulationGame X11 pthread)
-endif()
-
-# --- Copy SFML DLLs to the output directory ---
-if(WIN32)
-    # Define the directory containing the DLLs
+# --- Copy SFML DLLs for Windows builds ---
+if (WIN32)
     set(SFML_BIN_DIR "${CMAKE_SOURCE_DIR}/external/SFML/bin")
-    
-    # List of SFML modules
+
     foreach(dll IN ITEMS "sfml-audio" "sfml-graphics" "sfml-network" "sfml-system" "sfml-window")
         add_custom_command(TARGET GravitySimulationGame POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different

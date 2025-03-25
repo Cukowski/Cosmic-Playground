@@ -8,3 +8,5 @@ Makefile
 # OS-specific
 .DS_Store
 Thumbs.db
+
+imgui.ini
